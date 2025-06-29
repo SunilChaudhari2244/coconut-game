@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coconut Beach Game</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const background = new Image();
+    background.src = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?fit=crop&w=1920&q=80';
+
+    let coconuts = [];
+    let halves = [];
+    let score = 0;
+
+    function createCoconut() {
+      const radius = 30;
+      return {
+        x: Math.random() * (canvas.width - 2 * radius) + radius,
+        y: -radius,
+        radius,
+        vy: 3 + Math.random() * 2,
+        alive: true
+      };
+    }
+
+    function drawCoconut(c) {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#6b4f1d';
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawHalves() {
+      halves.forEach(h => {
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, h.radius, h.start, h.end);
+        ctx.fillStyle = '#d2b48c';
+        ctx.fill();
+        ctx.closePath();
+
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, h.radius / 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'aqua'; // splash water
+        ctx.fill();
+        ctx.closePath();
+
+        h.x += h.vx;
+        h.y += h.vy;
+        h.vy += 0.3;
+      });
+    }
+
+    function drawScore() {
+      ctx.fillStyle = 'white';
+      ctx.font = '24px Arial';
+      ctx.fillText(`Coconuts Cut: ${score}`, 20, 40);
+    }
+
+    function updateGame() {
+      if (Math.random() < 0.02) coconuts.push(createCoconut());
+
+      coconuts.forEach(c => {
+        if (c.alive) {
+          c.y += c.vy;
+        }
+      });
+    }
+
+    function drawGame() {
+      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+      coconuts.forEach(c => c.alive && drawCoconut(c));
+      drawHalves();
+      drawScore();
+    }
+
+    function splitCoconut(x, y) {
+      coconuts.forEach(c => {
+        if (!c.alive) return;
+        const dx = x - c.x;
+        const dy = y - c.y;
+        if (Math.sqrt(dx * dx + dy * dy) < c.radius) {
+          c.alive = false;
+          score++;
+          for (let i = 0; i < 2; i++) {
+            halves.push({
+              x: c.x,
+              y: c.y,
+              radius: c.radius,
+              start: i === 0 ? 0 : Math.PI,
+              end: i === 0 ? Math.PI : Math.PI * 2,
+              vx: i === 0 ? -3 : 3,
+              vy: -6
+            });
+          }
+        }
+      });
+    }
+
+    canvas.addEventListener('mousedown', e => {
+      splitCoconut(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('touchstart', e => {
+      const touch = e.touches[0];
+      splitCoconut(touch.clientX, touch.clientY);
+    });
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      updateGame();
+      drawGame();
+      requestAnimationFrame(animate);
+    }
+
+    background.onload = animate;
+  </script>
+</body>
+</html>
